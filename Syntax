@@ -1,0 +1,308 @@
+library(readxl)
+library(dplyr)
+library(tidyverse)
+library(vctrs)
+library(base)
+library(lessR)
+library(psych)
+library(naniar)
+library(misty)
+Meting_1_original <- read_excel("C:/Users/jakob/OneDrive/Desktop/SHP/SHP8/10YUP/10YUP data - meting 1.1 - dd 1-12-2020.xlsx")
+Meting_1 <- Meting_1_original%>%
+  filter(., between(geboortejaar, 2003,2004))
+
+
+Meting_1$geslacht <- as.character(Meting_1$geslacht)
+
+#geslacht as character
+Meting_1$geslacht[Meting_1$geslacht == "0"] <- "Male"
+Meting_1$geslacht[Meting_1$geslacht == "1"] <- "Female"
+Meting_1$geslacht[Meting_1$geslacht == "2"] <- "Other"
+Meting_2 <- read_excel("C:/Users/jakob/OneDrive/Desktop/SHP/SHP8/10YUP/10YUP data - meting 1.2 - dd 4-3-2021.xlsx")
+Meting_3 <- read_excel("C:/Users/jakob/OneDrive/Desktop/SHP/SHP8/10YUP/10YUP data - meting 1.3 - dd 16-6-2021.xlsx")%>%
+  as.na(., na=999)
+Meting_4 <- read_excel("C:/Users/jakob/OneDrive/Desktop/SHP/SHP8/10YUP/10YUP data - meting 1.4 - dd 26-1-2022.xlsx")%>%
+  as.na(., na=999)
+Meting_1$geslacht = factor(Meting_1$geslacht, levels = c("Female", "Male", "Other"), ordered = TRUE)
+
+#education as character & in order
+Meting_1$opleiding[Meting_1$opleiding == "1"] <- "VMBO-k/b"
+Meting_1$opleiding[Meting_1$opleiding == "2"] <- "VMBO-g/t/MAVO"
+Meting_1$opleiding[Meting_1$opleiding == "3"] <- "HAVO"
+Meting_1$opleiding[Meting_1$opleiding == "4"] <- "VWO"
+Meting_1$opleiding[Meting_1$opleiding == "5"] <- "MBO"
+Meting_1$opleiding[Meting_1$opleiding == "6"] <- "HBO"
+Meting_1$opleiding[Meting_1$opleiding == "7"] <- "WO"
+
+
+Meting_1$opleiding = factor(Meting_1$opleiding, levels = c("VMBO-k/b", "VMBO-g/t/MAVO", "HAVO", "VWO", "MBO", "HBO", "WO"), ordered = TRUE)
+
+Meting_1$opleiding
+
+#ethnicity as character
+Meting_3$etniciteit_1[Meting_3$etniciteit_1 == "1"] <- "Netherlands"
+Meting_3$etniciteit_1[Meting_3$etniciteit_1 == "2"] <- "Morocco"
+Meting_3$etniciteit_1[Meting_3$etniciteit_1 == "3"] <- "Turkey"
+Meting_3$etniciteit_1[Meting_3$etniciteit_1 == "4"] <- "Suriname"
+Meting_3$etniciteit_1[Meting_3$etniciteit_1 == "5"] <- "Germany"
+Meting_3$etniciteit_1[Meting_3$etniciteit_1 == "6"] <- "Belgium"
+Meting_3$etniciteit_1[Meting_3$etniciteit_1 == "7"] <- "Formerly Netherlands Antilles"
+Meting_3$etniciteit_1[Meting_3$etniciteit_1 == "8"] <- "Other"
+Meting_3 <- Meting_3%>%
+  replace_with_na(replace=list(x=999))
+
+
+
+#how many in 2 or more measurements
+ID1 <- Meting_1_original$ID
+ID2 <- Meting_2$id
+ID3 <- Meting_3$pp_id
+ID4 <- Meting_4$pp_id
+max_length <- length(ID1)
+ID <- data.frame(col1=c(ID1, rep(NA, max_length - length (ID1))),
+                 col2=c(ID2,rep(NA, max_length - length (ID2))),
+                 col3=c(ID3,rep(NA, max_length - length (ID3))),
+                 col4=c(ID4,rep(NA, max_length - length (ID4))))
+length(ID4)
+IDlong <- ID %>%
+  pivot_longer(c(`col1`,`col2`, `col3`, `col4`), names_to = "count")
+tidyID <- IDlong%>%
+  count(value)%>%
+  filter(n >= 2)
+ID2plus <- tidyID$value
+
+#age measure1 
+
+#checking for age outliers
+Meting_1 <- Meting_1%>%
+  mutate(age = (2020.917-geboortejaar-((geboortemaand/12))))
+as.numeric(unlist(Meting_1$geboortejaar))%>%
+  min(na.rm=TRUE)
+as.numeric(unlist(Meting_1$geboortejaar))%>%
+  max(na.rm=TRUE)
+
+
+
+Meting_1%>%
+  ggplot(aes(x=geboortejaar, y=""))+
+  geom_boxplot()+
+  geom_point(size=0.01)+
+  geom_jitter(width=0.1, height=0.4)
+  
+as.numeric(unlist(Meting_1$age))%>%
+  mean(na.rm=TRUE)
+as.numeric(unlist(Meting_1$age))%>%
+  min(na.rm=TRUE)
+as.numeric(unlist(Meting_1$age))%>%
+  max(na.rm=TRUE)
+as.numeric(unlist(Meting_1$age))%>%
+  describe()
+#age 2 or more measures
+ID2plus <- as.vector(ID2plus)
+M12plus <- Meting_1[Meting_1$ID %in% ID2plus,]
+as.numeric(unlist(M12plus$age))%>%
+  mean(na.rm=TRUE)
+as.numeric(unlist(M12plus$age))%>%
+  min(na.rm=TRUE)
+as.numeric(unlist(M12plus$age))%>%
+  max(na.rm=TRUE)
+
+M12plus%>%
+  ggplot(aes(x=geboortejaar, y=""))+
+  geom_boxplot()+
+  geom_jitter(width=0.1)
+
+#gender measure1
+Geslacht1 <- table(Meting_1$geslacht)
+#gender 2 or more measures
+Geslacht2plus <- table(M12plus$geslacht)
+
+#Education
+Edu1 <- table(Meting_1$opleiding)
+view(Edu1)
+Edu2plus <- table(M12plus$opleiding)
+
+ggplot(data=subset(Meting_1,!is.na(opleiding)), aes(x=factor(opleiding), fill=factor(opleiding)))+
+  geom_bar()+
+  geom_text(aes(label=..count..), stat ="count", vjust=-0.3)+
+  labs(title = "Education Distribution for Wave 1", x="", y="", fill = "")+
+  ylim(0,900)+
+  theme(panel.background = element_rect(fill = 'white', colour = 'white'),
+        legend.position = "none", plot.title= element_text(hjust = 0.5))+
+  scale_fill_brewer(palette="YlOrBr")
+ggsave("Education.png", dpi=900)
+
+ggplot(data = subset(Meting_1, !is.na(geslacht)), aes(x=geslacht, fill=factor(geslacht)))+
+  geom_bar()+
+  geom_text(aes(label=..count..),stat= "count", vjust=-0.3)+
+  labs(title = "Sex Distribution of Wave 1", 
+       x="", y= "", fill = "Sex")+
+  theme(panel.background = element_rect(fill = 'white', colour = 'white'),
+        legend.position="none", plot.title=element_text(hjust=0.5))+
+  scale_fill_brewer(palette="YlOrBr")
+ggsave("Sex.png", dpi=900)
+
+#Ethnicity
+Eth1 <- table(Meting_3$etniciteit_1)
+
+##Goals
+#Frequency
+
+GoalsFreq <- Meting_1%>%
+  select(4:39)%>%
+  colSums(., na.rm = TRUE)%>%
+  as.tibble()
+
+FreqPerc <- round(GoalsFreq/2149 * 100, digits = 0)
+
+colnames(GoalsFreq) <- c("Frequency")
+GoalsNums <- c(1:36)
+rownames(GoalsFreq) <- GoalsNums
+
+
+#Importance
+GoalsImp <- Meting_1%>%
+  select(42:77)%>%
+  summarize_all(., mean, na.rm=TRUE)%>%
+  round(., digits=0)%>%
+  t()
+
+colnames(GoalsImp) <- c("Importance")
+rownames(GoalsImp) <- GoalsNums
+
+#Attainability
+
+GoalsAtt <- Meting_1%>%
+  select(78:113)%>%
+  summarize_all(., mean, na.rm=TRUE)%>%
+  round(., digits=0)%>%
+  t()
+
+colnames(GoalsAtt) <- c("Attainability")
+rownames(GoalsAtt) <- GoalsNums
+
+Goals <- data.frame(GoalsNums, GoalsFreq, FreqPerc, GoalsImp, GoalsAtt)%>%
+  as.tibble()
+
+
+  
+
+write.excel <- function(x,row.names=FALSE,col.names=TRUE,...) {
+  write.table(x,"clipboard",sep="\t",row.names=row.names,col.names=col.names,...)
+}
+
+write.excel(Goals)
+
+#SelfRegulationStrats
+##constructing a table with the mean values of each strat with Meting
+
+Strategies <- c("goalstratdata_1", "goalstratdata_2", "goalstratdata_3", "goalstratdata_4", "goalstratdata_5", "goalstratdata_6", "goalstratdata_7", "goalstratdata_8", "goalstratdata_9")
+
+
+SelfReg1 <- Meting_1%>%
+  select(Strategies)
+
+
+SelfReg2 <- Meting_2%>%
+  select(Strategies)
+
+
+SelfReg3 <- Meting_3%>%
+  select(Strategies)
+
+SelfReg4 <- Meting_4%>%
+  select(Strategies)
+
+MeanSelfReg1 <- t(summarize_all(SelfReg1, mean, na.rm=TRUE))%>%
+  as.numeric()
+MeanSelfReg2 <-t(summarize_all(SelfReg2, mean, na.rm=TRUE))%>%
+  as.numeric()
+MeanSelfReg3 <-t(summarize_all(SelfReg3, mean, na.rm=TRUE))%>%
+  as.numeric()
+MeanSelfReg4 <-t(summarize_all(SelfReg4, mean, na.rm=TRUE))%>%
+  as.numeric()
+
+ 
+
+SelfReg <- data.frame(MeanSelfReg1, MeanSelfReg2, MeanSelfReg3, MeanSelfReg4)
+
+MeanMean <- rowMeans(SelfReg, na.rm=TRUE)
+
+SelfReg <- SelfReg%>%
+  mutate(Strat = c("Planning", "Checking", "Opportunities", "Positivity", "Habits", "Perseverance", "Not giving up", "Taking Initiative", "Rewards"))
+
+MeanSelfReg <- SelfReg%>%
+  mutate(Mean = MeanMean)
+
+  
+colnames(SelfReg) <- c("1", "2", "3", "4", "Strat")
+colnames(MeanSelfReg) <- c("W1", "W2", "W3", "W4", "Strat", "Mean")
+
+#Create SelfRegLong because long format needed to compute the charts
+
+
+SelfRegLong <- SelfReg%>%
+  pivot_longer(c(`1`, `2`, `3`, `4`), values_to = "Score", names_to="Meting")%>%
+  transform(Score=as.numeric(Score))
+
+
+
+#Reverse Code Procrastination to Taking Initiative
+100-SelfRegLong$Score
+SelfRegLong$Score[c(21:24)] <- c(29,61,51,53)
+view(SelfRegLong)
+
+RoundSelfRegLong <- SelfRegLong$Score%>%
+  round(digits=0)
+
+SelfRegLong$Score <- RoundSelfRegLong
+
+#Charts SelfReg
+ggplot(data=SelfRegLong, aes(x=Meting, y=Score, fill=Meting))+
+  geom_bar(stat="identity")+
+  labs(title = "Extent of Use of Self-Regulation Strategies per Wave", 
+       x="Wave No.", y= "Extent of Use")+  
+  theme(legend.position = "none")+
+  geom_text(aes(label=Score, vjust=-.5))+
+  ylim(0,100)+
+  facet_wrap(~Strat)+
+  theme(panel.background = element_rect(fill = 'white', colour = 'white'))+
+  scale_fill_brewer(palette="YlOrBr")
+ggsave("SelfRegPerStrat.png", dpi=900)
+
+
+ggplot(data=SelfRegLong, aes(x=Strat, y=Score, fill=Strat))+
+  geom_bar(stat="identity")+
+  scale_x_discrete(guide=guide_axis(n.dodge = 3))+
+  labs(title = "Extent of Use of Self-Regulation Strategies per Wave", 
+       x="Wave No.", y= "Extent of Use", fill="Strategies")+
+  theme(axis.text.x= element_blank())+
+  geom_text(aes(label=Score), vjust=-1)+
+  ylim(0,100)+
+  facet_wrap(~Meting)+
+  theme(panel.background = element_rect(fill = 'white', colour = 'white'))+
+  scale_fill_brewer(palette="YlOrBr")
+ggsave("SelfRegPerWave.png", dpi=900)
+  
+
+#Reverse Code Procrastination also for MeansSelfReg to be able to construct Chart for Mean of SelfReg
+MeanSelfReg$W1[8] <- 29
+MeanSelfReg$W2[8] <- 61
+MeanSelfReg$W3[8] <- 51
+MeanSelfReg$W4[8] <- 53
+MeanSelfReg$Mean[8] <- 49
+
+ggplot(data=MeanSelfReg, aes(x=Strat, y=Mean, fill=Strat))+
+  geom_bar(stat="identity")+
+  geom_text(aes(label=round(Mean, 0)), vjust=-0.3, size=4)+
+  scale_x_discrete(guide=guide_axis(n.dodge = 3))+
+  labs(title = "Mean Extent of Use of Self-Regulation Strategies", 
+       x= "Strategies",y="Mean Extent of Use", fill="Strategies",(axis.text.x= element_blank()))+
+  theme(axis.text.x= element_blank())+
+  ylim(0,100)+
+  theme(panel.background = element_rect(fill = 'white', colour = 'white'))+
+  scale_fill_brewer(palette="YlOrBr")
+ggsave("MeanSelfReg.png", dpi=900)
+
+
+
